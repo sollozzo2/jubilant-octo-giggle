@@ -8,6 +8,7 @@
 #define PORT 6969
 int main(int argc, char const *argv[]) 
 { 
+	file * fptr;
 	int server_fd, new_socket, valread; 
 	struct sockaddr_in address; 
 	int opt = 1; 
@@ -51,9 +52,17 @@ int main(int argc, char const *argv[])
 		perror("accept"); 
 		exit(EXIT_FAILURE); 
 	} 
+	//here's to opening a gif
+	if ((fptr = fopen("/home/pi/Desktop/Rotating_earth_(large).gif","rb")) == NULL) {
+		printf("Error! opening file");
+		exit(1);
+	}
+
+	//finished opening gif
 	valread = read( new_socket , buffer, 1024); 
-	printf("%s\n",buffer ); 
-	send(new_socket , hello , strlen(hello) , 0 ); 
+	printf("%s\n",buffer );
+	char * response = "HTTP/1.1 200 OK\nContent-type: text/plain\n\nhello world";
+	send(new_socket , response , strlen(response) , 0 ); 
 	printf("Hello message sent\n"); 
 	return 0; 
 } 
