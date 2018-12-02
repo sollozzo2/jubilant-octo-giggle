@@ -6,10 +6,13 @@
 #include <netinet/in.h> 
 #include <string.h> 
 #define PORT 6969
+
+int static new_socket;
 int main(int argc, char const *argv[]) 
 { 
 	FILE * fptr;
-	int server_fd, new_socket, valread; 
+	pid_t pid;
+	int server_fd, valread; 
 	struct sockaddr_in address; 
 	int opt = 1; 
 	int addrlen = sizeof(address); 
@@ -45,13 +48,28 @@ int main(int argc, char const *argv[])
 	{ 
 		perror("listen"); 
 		exit(EXIT_FAILURE); 
-	} 
-	if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
+	}
+	
+	while (1) {
+		if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
 					(socklen_t*)&addrlen))<0) 
-	{ 
-		perror("accept"); 
-		exit(EXIT_FAILURE); 
-	} 
+		{ 
+			perror("accept"); 
+			exit(EXIT_FAILURE); 
+		}
+		pid = fork();
+		if (pid==0) {
+			valread = read( new_socket , buffer, 1024); 
+			printf("%s\n",buffer );
+			char * response = "HTTP/1.1 200 OK\nContent-type: text/html\n\n<html><body><h1>Hello, World!</h1></body></html>";
+			send(new_socket , response , strlen(response) , 0 ); 
+			printf("Hello message sent\n"); 
+		} else {
+			
+		}
+		
+		 	
+	}
 	//here's to opening a gif
 	/* if ((fptr = fopen("/home/pi/Desktop/Rotating_earth_(large).gif","rb")) == NULL) {
 		printf("Error! opening file");
@@ -59,10 +77,6 @@ int main(int argc, char const *argv[])
 	} */
 
 	//finished opening gif
-	valread = read( new_socket , buffer, 1024); 
-printf("%s\n",buffer );
-	char * response = "HTTP/1.1 200 OK\nContent-type: text/html\n\n<html><body><h1>Hello, World!</h1></body></html>";
-	send(new_socket , response , strlen(response) , 0 ); 
-	printf("Hello message sent\n"); 
+	
 	return 0; 
 } 
