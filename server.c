@@ -63,9 +63,11 @@ int main(int argc, char const *argv[])
 			printf("%s\n",buffer );
 			char * response = "HTTP/1.1 200 OK\nContent-type: text/html\n\n<html><body><h1>Hello, World!</h1></body></html>";
 			send(new_socket , response , strlen(response) , 0 ); 
+            close(new_socket);
+            exit(0);
 			printf("Hello message sent\n"); 
 		} else {
-			
+		    close(new_socket);	
 		}
 		
 		 	
