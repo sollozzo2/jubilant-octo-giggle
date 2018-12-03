@@ -9,7 +9,7 @@
 #define PORT 6969
 
 int static new_socket;
-
+void list_dir(char *dir_name, char* file_str);
 void htmlhandler(char * filename, int new_socket) {
     FILE * toopen;
     if ((toopen = fopen(filename,"r")) == NULL) {
@@ -59,7 +59,7 @@ int parse(char * buffer, char *filename) {
             
             current2++;
             printf("directory name is %s\n", current2);
-            filename = current2;
+            strcpy(filename,current2);
             return 1;
         }
     } else {
@@ -93,26 +93,43 @@ int parse(char * buffer, char *filename) {
 
 void directory_request(char* filename, int new_socket) {
 
+    char files[10000];
+    char *file_string = files;
+    list_dir(filename, file_string);
+
+    char * header = "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\n";
+    
+    send(new_socket, header, strlen(header), 0);
+    send(new_socket, file_string, strlen(file_string), 0);
+
 }
 
 
-int list_dir(char *dir_name) {
+void list_dir(char *dir_name, char* file_str) {
+
+
     printf("running list dir\n");
     struct dirent *dir;
 
     DIR *d = opendir(dir_name);
 
     if (d == NULL) {
-        printf("couldnt open current directory\n");
-        return 0;
+        printf("couldnt open current directory %s\n", dir_name);
+        return;
     }
 
     while ((dir = readdir(d)) != NULL) {
-            printf("%s\n", dir->d_name);
+        printf("%s\n", dir->d_name);
+        strcat(file_str, dir->d_name);
+        strcat(file_str, "\n");
+
     }
     closedir(d);
 
-    return 0;
+    printf("contents of buffer\n");
+    printf("%s\n", file_str);
+
+    return;
 }
 
 
@@ -172,6 +189,8 @@ int main(int argc, char const *argv[])
             char *fp = filename;
             int req_type = parse(buffer, fp);
 
+            printf("filename: %s\n", filename);
+
             switch(req_type) {
                 case -1:
                     // bad case no args
@@ -206,13 +225,7 @@ int main(int argc, char const *argv[])
 
             }
 
-            // case of request for directory listing
-            char dirname[7] = "testdir";
-            char *p = dirname;
-            list_dir(p); 
 			printf("%s\n",buffer );
-			char * response = "HTTP/1.1 200 OK\nContent-type: text/html\n\n<html><body><h1>Hello, World!</h1></body></html>";
-			send(new_socket , response , strlen(response) , 0 ); 
             close(new_socket);
             exit(0);
 			printf("Hello message sent\n"); 
