@@ -168,31 +168,42 @@ int main(int argc, char const *argv[])
 		pid = fork();
 		if (pid==0) {
 			valread = read( new_socket , buffer, 1024); 
-            char *filename;
-            int req_type = parse(buffer, filename);
+            char filename[100];
+            char *fp = filename;
+            int req_type = parse(buffer, fp);
 
             switch(req_type) {
                 case -1:
                     // bad case no args
+                    break;
 
                 case 1:
                     // directory 
-                    directory_request(filename, new_socket);
+                    directory_request(fp, new_socket);
+                    break;
 
                 case 2:
                     // gif case 
+                    gifhandler(fp, new_socket);
+                    break;
                 case 3:
                     //jpg 
+                    break;
+
                 case 4:
                     //jpeg
+                    break;
                 case 5:
                     //html
-                    htmlhandler(filename, new_socket);
+                    htmlhandler(fp, new_socket);
+                    break;
                 case 6:
                     //cgi
                 default:
                     //unrecognized file type 
                     printf("unrecognized file type\n");
+                    break;
+
             }
 
             // case of request for directory listing
