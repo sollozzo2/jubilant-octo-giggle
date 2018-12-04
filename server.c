@@ -8,8 +8,9 @@
 #include <dirent.h>
 #define PORT 6969
 
-int static new_socket;
+
 void list_dir(char *dir_name, char* file_str);
+void cgiHandler(char *filename, int new_socket);
 void htmlhandler(char * filename, int new_socket) {
     FILE * toopen;
     if ((toopen = fopen(filename,"r")) == NULL) {
@@ -137,6 +138,7 @@ int main(int argc, char const *argv[])
 { 
 	FILE * fptr;
 	pid_t pid;
+	int new_socket;
 	int server_fd, valread; 
 	struct sockaddr_in address; 
 	int opt = 1; 
@@ -217,7 +219,7 @@ int main(int argc, char const *argv[])
                     htmlhandler(fp, new_socket);
                     break;
                 case 6:
-                    //cgi
+                    cgiHandler(fp, new_socket);
                 default:
                     //unrecognized file type 
                     printf("unrecognized file type\n");
@@ -237,7 +239,32 @@ int main(int argc, char const *argv[])
 	//finished opening gif
 	
 	return 0; 
-} 
+}
+
+void cgiHandler(char *filename, int new_socket) {
+	FILE *fp;
+	char buf[256];
+	char response[10000];
+	char commandstring[500];
+	strcat(commandstring,"sh ");
+	strcat(commandstring,filename);
+	if ((fp = popen(commandstring,"r"))==NULL) {
+		perror("Popen did not work");
+	} else {
+		char * header = "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\n";
+		while (fgets(buf,256,fp)!=NULL) {
+			strcat(response,buf);
+			strcat(response,"\n");
+		}
+		pclose(fp);
+		send(new_socket,header,strlen(header),0);
+		send(new_socket,response,strlen(response),0);
+	}
+	
+
+}	
+
+
 
 
 
