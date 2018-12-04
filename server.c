@@ -242,21 +242,30 @@ int main(int argc, char const *argv[])
 }
 
 void cgiHandler(char *filename, int new_socket) {
-	FILE *fp;
+	FILE *output;
+	FILE *script;
 	char buf[256];
+	char scriptBuf[256];
 	char response[10000];
 	char commandstring[500];
-	strcat(commandstring,"sh ");
+	script = fopen(filename,"r");
+	fgets(scriptBuf,256,script);
+	if (strcmp(scriptBuf,"#!/bin/sh")==0) {
+		strcat(commandstring,"sh ");
+	} else {
+		strcat(commandstring,"perl ");
+	}
+	
 	strcat(commandstring,filename);
-	if ((fp = popen(commandstring,"r"))==NULL) {
+	if ((output = popen(commandstring,"r"))==NULL) {
 		perror("Popen did not work");
 	} else {
-		char * header = "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\n";
-		while (fgets(buf,256,fp)!=NULL) {
+		char * header = "HTTP/1.1 200 OK\r\n";
+		while (fgets(buf,256,output)!=NULL) {
 			strcat(response,buf);
 			strcat(response,"\n");
 		}
-		pclose(fp);
+		pclose(output);
 		send(new_socket,header,strlen(header),0);
 		send(new_socket,response,strlen(response),0);
 	}
