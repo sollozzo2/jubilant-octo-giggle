@@ -5,11 +5,141 @@
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
+#include <dirent.h>
 #define PORT 6969
+
+
+void list_dir(char *dir_name, char* file_str);
+void cgiHandler(char *filename, int new_socket);
+void htmlhandler(char * filename, int new_socket) {
+    FILE * toopen;
+    if ((toopen = fopen(filename,"r")) == NULL) {
+        printf("Error! opening file in htmlhandle");
+        exit(1);
+    }
+    char * header = "HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\n";
+    char htmlfile[5000];
+    fread(htmlfile, 5000, 1, toopen);
+    
+    send(new_socket, header, strlen(header), 0);
+    send(new_socket, htmlfile, strlen(htmlfile), 0);
+    return;
+}
+
+void gifhandler(char * filename, int new_socket) {
+    FILE * toopen;
+    if ((toopen = fopen(filename,"rb")) == NULL) {
+        printf("Error! opening file in gifhandle");
+        //send 404?
+        //send(new_socket, ", , 0);
+        exit(1);
+    }   
+    char * header = "HTTP/1.1 200 OK\r\nContent-type: image/gif\r\n\r\n";
+    //might be better if imagebuf size is FILE_MAX_SIZE
+    char imagebuf[1500000];
+    fread(imagebuf, 1500000, 1, toopen);
+    send(new_socket, header, strlen(header), 0);
+    send(new_socket, imagebuf, 1500000, 0);
+    return;
+}
+int parse(char * buffer, char *filename) {
+    strtok(buffer,"\n");
+    char * current = strtok(buffer, " ");
+    printf("%s %s\n","First token:",current);
+    char * current2 = strtok(NULL," ");
+    printf("%s %s\n","Second token:",current2);
+    char * ptr;
+    ptr = strchr(current2, '.');
+    int i =0;
+    if (ptr==NULL) {
+        if (strcmp("/",current2)==0) {
+            printf("%s\n","No args");
+            return -1;
+        } else {
+            printf("Running null\n");
+            
+            current2++;
+            printf("directory name is %s\n", current2);
+            strcpy(filename,current2);
+            return 1;
+        }
+    } else {
+        printf("Running while loop\n");
+        current2++;
+        strcpy(filename,current2);
+        while (*current2!='.') {
+            *current2++;
+        }
+        *current2++;
+        char *ext;
+        ext = current2;
+        printf("%s %s","Filename:",filename);
+        printf("%s %s","Extension:",ext);
+        if (strcmp("gif",ext)==0) {
+            return 2;
+        } else if (strcmp("jpg",ext)==0) {
+            return 3;
+        } else if (strcmp("jpeg",ext)==0) {
+            return 4;
+        } else if (strcmp("html",ext)==0) {
+            return 5;
+        } else if (strcmp("cgi",ext)==0) {
+            return 6;
+        } else {
+            return -1;
+        }
+    }
+    
+} 
+
+void directory_request(char* filename, int new_socket) {
+
+    char files[10000];
+    char *file_string = files;
+    list_dir(filename, file_string);
+
+    char * header = "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\n";
+    
+    send(new_socket, header, strlen(header), 0);
+    send(new_socket, file_string, strlen(file_string), 0);
+
+}
+
+
+void list_dir(char *dir_name, char* file_str) {
+
+
+    printf("running list dir\n");
+    struct dirent *dir;
+
+    DIR *d = opendir(dir_name);
+
+    if (d == NULL) {
+        printf("couldnt open current directory %s\n", dir_name);
+        return;
+    }
+
+    while ((dir = readdir(d)) != NULL) {
+        printf("%s\n", dir->d_name);
+        strcat(file_str, dir->d_name);
+        strcat(file_str, "\n");
+
+    }
+    closedir(d);
+
+    printf("contents of buffer\n");
+    printf("%s\n", file_str);
+
+    return;
+}
+
+
 int main(int argc, char const *argv[]) 
 { 
 	FILE * fptr;
-	int server_fd, new_socket, valread; 
+	pid_t pid;
+	int new_socket;
+	int server_fd, valread; 
 	struct sockaddr_in address; 
 	int opt = 1; 
 	int addrlen = sizeof(address); 
@@ -45,24 +175,105 @@ int main(int argc, char const *argv[])
 	{ 
 		perror("listen"); 
 		exit(EXIT_FAILURE); 
-	} 
-	if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
+	}
+	
+	while (1) {
+		if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
 					(socklen_t*)&addrlen))<0) 
-	{ 
-		perror("accept"); 
-		exit(EXIT_FAILURE); 
-	} 
-	//here's to opening a gif
-	/* if ((fptr = fopen("/home/pi/Desktop/Rotating_earth_(large).gif","rb")) == NULL) {
-		printf("Error! opening file");
-		exit(1);
-	} */
+		{ 
+			perror("accept"); 
+			exit(EXIT_FAILURE); 
+		}
+		pid = fork();
+		if (pid==0) {
+			valread = read( new_socket , buffer, 1024); 
+            char filename[100];
+            char *fp = filename;
+            int req_type = parse(buffer, fp);
+
+            printf("filename: %s\n", filename);
+
+            switch(req_type) {
+                case -1:
+                    // bad case no args
+                    break;
+
+                case 1:
+                    // directory 
+                    directory_request(fp, new_socket);
+                    break;
+
+                case 2:
+                    // gif case 
+                    gifhandler(fp, new_socket);
+                    break;
+                case 3:
+                    //jpg 
+                    break;
+
+                case 4:
+                    //jpeg
+                    break;
+                case 5:
+                    //html
+                    htmlhandler(fp, new_socket);
+                    break;
+                case 6:
+                    cgiHandler(fp, new_socket);
+                default:
+                    //unrecognized file type 
+                    printf("unrecognized file type\n");
+                    break;
+
+            }
+
+			printf("%s\n",buffer );
+            close(new_socket);
+            exit(0);
+			printf("Hello message sent\n"); 
+		} else {
+		    close(new_socket);	
+		}
+	}
 
 	//finished opening gif
-	valread = read( new_socket , buffer, 1024); 
-printf("%s\n",buffer );
-	char * response = "HTTP/1.1 200 OK\nContent-type: text/html\n\n<html><body><h1>Hello, World!</h1></body></html>";
-	send(new_socket , response , strlen(response) , 0 ); 
-	printf("Hello message sent\n"); 
+	
 	return 0; 
-} 
+}
+
+void cgiHandler(char *filename, int new_socket) {
+	FILE *output;
+	FILE *script;
+	char buf[256];
+	char scriptBuf[256];
+	char response[10000];
+	char commandstring[500];
+	script = fopen(filename,"r");
+	fgets(scriptBuf,256,script);
+	if (strcmp(scriptBuf,"#!/bin/sh")==0) {
+		strcat(commandstring,"sh ");
+	} else {
+		strcat(commandstring,"perl ");
+	}
+	
+	strcat(commandstring,filename);
+	if ((output = popen(commandstring,"r"))==NULL) {
+		perror("Popen did not work");
+	} else {
+		char * header = "HTTP/1.1 200 OK\r\n";
+		while (fgets(buf,256,output)!=NULL) {
+			strcat(response,buf);
+			strcat(response,"\n");
+		}
+		pclose(output);
+		send(new_socket,header,strlen(header),0);
+		send(new_socket,response,strlen(response),0);
+	}
+	
+
+}	
+
+
+
+
+
