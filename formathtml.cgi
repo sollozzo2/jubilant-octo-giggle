@@ -1,5 +1,10 @@
 #! /usr/bin/perl
-system ("./my-histogram .. | gnuplot");
+
+my($fieldname, $directory) = split(/=/, $ENV{QUERY_STRING});
+system ("./my-histogram $directory | gnuplot");
+
+
+print "Content-type: text/html\r\n\r\n";
 print "<HTML>\n";
 print "<HEAD>\n";
 print "<TITLE> File Histogram </TITLE>";

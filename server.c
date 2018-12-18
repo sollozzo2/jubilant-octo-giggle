@@ -65,14 +65,31 @@ int parse(char * buffer, char *filename) {
         }
     } else {
         printf("Running while loop\n");
-        current2++;
-        strcpy(filename,current2);
-        while (*current2!='.') {
-            *current2++;
+		current2++;
+		printf("current2 is %s\n",current2);
+		char* firstHalf = strtok(current2,"?");
+		char* secondHalf = strtok(NULL,"?");
+		printf("firstHalf: %s",firstHalf);
+		
+		if (secondHalf!=NULL) {
+			printf(" secondHalf: %s",secondHalf);
+			char queryString[255];
+			strcpy(queryString,"QUERY_STRING=\"");
+			strcat(queryString, secondHalf);
+			strcat(queryString,"\"");
+			printf("%s %s","Query String: ",queryString);
+			int ret;
+			ret = setenv("QUERY_STRING",secondHalf,1);
+		}
+        
+        strcpy(filename,firstHalf);
+        while (*firstHalf!='.') {
+            *firstHalf++;
         }
-        *current2++;
+        *firstHalf++;
+	
         char *ext;
-        ext = current2;
+        ext = firstHalf;
         printf("%s %s","Filename:",filename);
         printf("%s %s","Extension:",ext);
         if (strcmp("gif",ext)==0) {
@@ -143,9 +160,17 @@ int main(int argc, char const *argv[])
 	struct sockaddr_in address; 
 	int opt = 1; 
 	int addrlen = sizeof(address); 
+	/*
+	static char *var = "QUERY_STRING=\"test1=HERE\"";
+	int ret;
+
+	ret = putenv(var);
+	printf(ret);
+	*/
+	
 	char buffer[1024] = {0}; 
 	char *hello = "Hello from server"; 
-	
+
 	// Creating socket file descriptor 
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
 	{ 
@@ -220,6 +245,7 @@ int main(int argc, char const *argv[])
                     break;
                 case 6:
                     cgiHandler(fp, new_socket);
+					break;
                 default:
                     //unrecognized file type 
                     printf("unrecognized file type\n");
@@ -250,6 +276,7 @@ void cgiHandler(char *filename, int new_socket) {
 	char commandstring[500];
 	script = fopen(filename,"r");
 	fgets(scriptBuf,256,script);
+	
 	if (strcmp(scriptBuf,"#!/bin/sh")==0) {
 		strcat(commandstring,"sh ");
 	} else {
