@@ -72,12 +72,6 @@ int parse(char * buffer, char *filename) {
 		printf("firstHalf: %s",firstHalf);
 		
 		if (secondHalf!=NULL) {
-			printf(" secondHalf: %s",secondHalf);
-			char queryString[255];
-			strcpy(queryString,"QUERY_STRING=\"");
-			strcat(queryString, secondHalf);
-			strcat(queryString,"\"");
-			printf("%s %s","Query String: ",queryString);
 			int ret;
 			ret = setenv("QUERY_STRING",secondHalf,1);
 		}
