@@ -116,12 +116,21 @@ void mydir(char * pathname, struct Node* start) {
 		if (lstat(curfilestr,&curfile) != 0) {
 			printf("lstatting error\n");
 		}
+		//printf("%s\n", curfilestr);
 		switch(curfile.st_mode & S_IFMT) {
 			case S_IFREG:
 				tally[0]++;
 				break;
 			case S_IFDIR:
-				tally[1]++;
+				//not including .. and . in tally
+				if (inList(start, curfile.st_ino) == 0){
+					if ((strcmp(curfilename, "..") != 0) && (strcmp(curfilename, ".") != 0)) {
+						tally[1]++;
+						insertnode(start,curfile.st_ino);
+						//printf("%s\n", curfilestr);
+						mydir(curfilestr, start);
+					}
+				}
 				break;
 			case S_IFIFO:
 				tally[2]++;
@@ -130,12 +139,14 @@ void mydir(char * pathname, struct Node* start) {
 				tally[3]++;
 				break;
 			case S_IFLNK:
+				//count both lnk and file??
 				tally[4]++;
 				if (stat(curfilestr,&curfile) != 0) printf("statting error\n");
 				//if there is a link to a dir, check if it's been traversed already
 				//if not traversed, add to traversed list and go through that dir
 				if (S_ISDIR(curfile.st_mode)) {
 					if (inList(start, curfile.st_ino) == 0){
+						tally[1]++;
 						insertnode(start,curfile.st_ino);
 						mydir(curfilestr, start);
 					}
@@ -187,7 +198,8 @@ int main(int argc, char * argv[]) {
 	struct Node* start = newnode(0);
 	mydir(argv[1], start);
 	formatdat(tally);
-	char * toprint = "reset\n\nset xlabel \"File Type\"\nset ylabel \"Number of Files\"\nset grid\nset boxwidth 0.95 relative\nset style fill transparent solid 0.5 noborder\nplot \"data1.dat\" u 2:xticlabels(1) w boxes lc rgb\"green\" notitle\n\nset yrange [GPVAL_Y_MIN-1:GPVAL_Y_MAX+2]\nset terminal gif\nset output \"myhistresult.gif\"\nreplot";
+	//printf("numreg is %d\n", tally[0]);
+	char * toprint = "reset\n\nset xlabel \"File Type\"\nset ylabel \"Number of Files\"\nset grid\nset boxwidth 0.95 relative\nset style fill transparent solid 0.5 noborder\nplot \"data1.dat\" u 2:xticlabels(1) w boxes lc rgb\"green\" notitle\n\nset yrange [0:GPVAL_Y_MAX+2]\nset terminal gif\nset output \"myhistresult.gif\"\nreplot";
 	printf(toprint);
 	return 0;
 	//send result gif to client after this
