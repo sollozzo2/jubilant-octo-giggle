@@ -23,7 +23,8 @@
  * 
  * */
 
-
+int tallyfile(char * curfilestr);
+struct Node* newnode(unsigned long data);
 //linked list implmentation for avoiding infinite recursive loop
 
 struct Node  
@@ -94,7 +95,7 @@ void formatdat(int data[7]) {
 	fclose(datafile);
 }
 
-void mydir(char * pathname) {
+void mydir(char * pathname, struct Node* start) {
 	DIR *dp;
 	struct dirent *dirp;
 	char final[500];
@@ -136,7 +137,7 @@ void mydir(char * pathname) {
 				if (S_ISDIR(curfile.st_mode)) {
 					if (inList(start, curfile.st_ino) == 0){
 						insertnode(start,curfile.st_ino);
-						mydir(curfilestr);
+						mydir(curfilestr, start);
 					}
 				}
 				//else if not dir, pass into a function that tallies files
@@ -183,7 +184,8 @@ int tallyfile(char * curfilestr) {
 int main(int argc, char * argv[]) {
 	if (argc < 2) printf("you have to enter a directory\n");
 	if (argc > 2) printf("too many args but proceeding anyway\n");
-	mydir(argv[1]);
+	struct Node* start = newnode(0);
+	mydir(argv[1], start);
 	formatdat(tally);
 	char * toprint = "reset\n\nset xlabel \"File Type\"\nset ylabel \"Number of Files\"\nset grid\nset boxwidth 0.95 relative\nset style fill transparent solid 0.5 noborder\nplot \"data1.dat\" u 2:xticlabels(1) w boxes lc rgb\"green\" notitle\n\nset yrange [GPVAL_Y_MIN-1:GPVAL_Y_MAX+2]\nset terminal gif\nset output \"myhistresult.gif\"\nreplot";
 	printf(toprint);
