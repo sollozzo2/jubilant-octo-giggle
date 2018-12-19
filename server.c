@@ -6,7 +6,9 @@
 #include <netinet/in.h> 
 #include <string.h> 
 #include <dirent.h>
-#define PORT 6969
+//#define PORT 6969
+char * fourofour = "HTTP/1.1 404 Not Found\r\nContent-type: text/html\r\n\r\n<html>\
+<head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><body></html>"
 
 
 void list_dir(char *dir_name, char* file_str);
@@ -29,9 +31,8 @@ void htmlhandler(char * filename, int new_socket) {
 void gifhandler(char * filename, int new_socket) {
     FILE * toopen;
     if ((toopen = fopen(filename,"rb")) == NULL) {
-        printf("Error! opening file in gifhandle");
-        //send 404?
-        //send(new_socket, ", , 0);
+        printf("Error! opening file in gifhandler");
+        send(new_socket, fourofour, strlen(fourofour), 0);
         exit(1);
     }   
     char * header = "HTTP/1.1 200 OK\r\nContent-type: image/gif\r\n\r\n";
@@ -42,6 +43,23 @@ void gifhandler(char * filename, int new_socket) {
     send(new_socket, imagebuf, 1500000, 0);
     return;
 }
+
+void jpghandler(char * filename, int new_socket) {
+    FILE * toopen;
+    if ((toopen = fopen(filename,"rb")) == NULL) {
+        printf("Error! opening file in jpghandler");
+        send(new_socket, fourofour, strlen(fourofour), 0);
+        exit(1);
+    }   
+    char * header = "HTTP/1.1 200 OK\r\nContent-type: image/jpg\r\n\r\n";
+    //might be better if imagebuf size is FILE_MAX_SIZE
+    char imagebuf[1500000];
+    fread(imagebuf, 1500000, 1, toopen);
+    send(new_socket, header, strlen(header), 0);
+    send(new_socket, imagebuf, 1500000, 0);
+    return;
+}
+
 int parse(char * buffer, char *filename) {
     strtok(buffer,"\n");
     char * current = strtok(buffer, " ");
@@ -145,6 +163,9 @@ int main(int argc, char const *argv[])
 	int addrlen = sizeof(address); 
 	char buffer[1024] = {0}; 
 	char *hello = "Hello from server"; 
+
+    if (argv[1] == NULL) printf("need PORT arg!!\n");
+    int port = strtol(argv[1], NULL, 10);
 	
 	// Creating socket file descriptor 
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
@@ -162,7 +183,7 @@ int main(int argc, char const *argv[])
 	} 
 	address.sin_family = AF_INET; 
 	address.sin_addr.s_addr = INADDR_ANY; 
-	address.sin_port = htons( PORT ); 
+	address.sin_port = htons( port ); 
 	
 	// Forcefully attaching socket to the port 8080 
 	if (bind(server_fd, (struct sockaddr *)&address, 
@@ -208,11 +229,11 @@ int main(int argc, char const *argv[])
                     gifhandler(fp, new_socket);
                     break;
                 case 3:
-                    //jpg 
+                    jpghandler(fp, new_socket);
                     break;
 
                 case 4:
-                    //jpeg
+                    jpghandler(fp, new_socket);
                     break;
                 case 5:
                     //html
