@@ -22,6 +22,54 @@
  * then there will be a gif image to send back to the client
  * 
  * */
+
+
+//linked list implmentation for avoiding infinite recursive loop
+
+struct Node  
+{ 
+  unsigned long data; 
+  struct Node *next; 
+}; 
+  
+struct Node* newnode(unsigned long data) 
+{ 
+  struct Node* node = (struct Node*)malloc(sizeof(struct Node)); 
+  node->data = data; 
+  node->next = NULL;
+  return(node); 
+}
+
+struct Node* insertnode(struct Node* n, unsigned long toinsert) {
+	struct Node* pointer = n;
+	while (pointer->next != NULL) pointer = pointer->next; 
+	pointer->next = newnode(toinsert);
+	return n;
+}
+
+void printList(struct Node *n) 
+{ 
+  while (n != NULL) 
+  { 
+     printf(" %d ", n->data); 
+     n = n->next; 
+  } 
+} 
+
+int inList(struct Node *n, unsigned long tolook) {
+	//returns 1 if given int is in given list
+	while (n != NULL) {
+		if (n->data == tolook) return 1;
+		n = n->next;
+	}
+	return 0;
+}
+
+
+//------------------------end of linkedlist code-------------------------------------------------
+
+
+int tally[7] = {0};
 void formatdat(int data[7]) {
 	FILE * datafile;
 	char strbuf[50];
@@ -51,11 +99,9 @@ void mydir(char * pathname) {
 	struct dirent *dirp;
 	char final[500];
 	struct stat curfile;
-	struct stat lnkfile;
 	char curfilestr[100];
 	char * curfilename;
 
-	int tally[7] = {0};
 	//memset(tally, 0, 6);
 	if ((dp = opendir(pathname)) == NULL) {
 		write(2,"cant open\n",11);
@@ -66,8 +112,8 @@ void mydir(char * pathname) {
 		strcat(curfilestr,"/");
 		strcat(curfilestr,curfilename);
 		//printf("curfilename: %s\n",curfilename);
-		if (stat(curfilestr, &curfile) != 0) {
-			printf("statting error\n");
+		if (lstat(curfilestr,&curfile) != 0) {
+			printf("lstatting error\n");
 		}
 		switch(curfile.st_mode & S_IFMT) {
 			case S_IFREG:
@@ -84,6 +130,22 @@ void mydir(char * pathname) {
 				break;
 			case S_IFLNK:
 				tally[4]++;
+				if (stat(curfilestr,&curfile) != 0) printf("statting error\n");
+				//if there is a link to a dir, check if it's been traversed already
+				//if not traversed, add to traversed list and go through that dir
+				if (S_ISDIR(curfile.st_mode)) {
+					if (inList(start, curfile.st_ino) == 0){
+						insertnode(start,curfile.st_ino);
+						mydir(curfilestr);
+					}
+				}
+				//else if not dir, pass into a function that tallies files
+				else {
+					if (inList(start, curfile.st_ino) == 0){
+						insertnode(start,curfile.st_ino);
+						tallyfile(curfilestr);
+					}
+				}
 				break;
 			case S_IFCHR:
 				tally[5]++;
@@ -94,15 +156,37 @@ void mydir(char * pathname) {
 
 		}
 	}
-	formatdat(tally);
+}
+
+int tallyfile(char * curfilestr) {
+	struct stat curfile;
+	if (stat(curfilestr,&curfile) != 0) printf("statting error in tallyfile\n");
+	switch(curfile.st_mode & S_IFMT) {
+		case S_IFREG:
+			tally[0]++;
+			break;
+		case S_IFIFO:
+			tally[2]++;
+			break;
+		case S_IFSOCK:
+			tally[3]++;
+			break;
+		case S_IFCHR:
+			tally[5]++;
+			break;
+		case S_IFBLK:
+			tally[6]++;
+			break;
+	}
 }
 
 int main(int argc, char * argv[]) {
 	if (argc < 2) printf("you have to enter a directory\n");
 	if (argc > 2) printf("too many args but proceeding anyway\n");
 	mydir(argv[1]);
+	formatdat(tally);
 	char * toprint = "reset\n\nset xlabel \"File Type\"\nset ylabel \"Number of Files\"\nset grid\nset boxwidth 0.95 relative\nset style fill transparent solid 0.5 noborder\nplot \"data1.dat\" u 2:xticlabels(1) w boxes lc rgb\"green\" notitle\n\nset yrange [GPVAL_Y_MIN-1:GPVAL_Y_MAX+2]\nset terminal gif\nset output \"myhistresult.gif\"\nreplot";
 	printf(toprint);
-	return 1;
+	return 0;
 	//send result gif to client after this
 }
