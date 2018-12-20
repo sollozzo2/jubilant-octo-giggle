@@ -84,14 +84,25 @@ int parse(char * buffer, char *filename) {
         }
     } else {
         printf("Running while loop\n");
-        current2++;
-        strcpy(filename,current2);
-        while (*current2!='.') {
-            *current2++;
+		current2++;
+		printf("current2 is %s\n",current2);
+		char* firstHalf = strtok(current2,"?");
+		char* secondHalf = strtok(NULL,"?");
+		printf("firstHalf: %s",firstHalf);
+		
+		if (secondHalf!=NULL) {
+			int ret;
+			ret = setenv("QUERY_STRING",secondHalf,1);
+		}
+        
+        strcpy(filename,firstHalf);
+        while (*firstHalf!='.') {
+            *firstHalf++;
         }
-        *current2++;
+        *firstHalf++;
+	
         char *ext;
-        ext = current2;
+        ext = firstHalf;
         printf("%s %s","Filename:",filename);
         printf("%s %s","Extension:",ext);
         if (strcmp("gif",ext)==0) {
@@ -295,8 +306,4 @@ void cgiHandler(char *filename, int new_socket) {
     
 
 }   
-
-
-
-
 
