@@ -19,11 +19,15 @@ void water() {
 
 void readhum() { 
   //do humidity sensor code here, print humidity lvl
-  Serial.println("reading humidity!");
+  //Serial.println("reading humidity!");
+  int sensorValue = analogRead(A0);
+  int humival = map(sensorValue, 700, 210, 0, 100);
+  Serial.println(humival);
   return;
 }
 
 void loop() {
+  digitalWrite(RELAY1,1);
   if (Serial.available() > 0) {
     userInput = Serial.read();
     if (userInput == '1') {
