@@ -11,7 +11,7 @@ char * fourofour = "HTTP/1.1 404 Not Found\r\nContent-type: text/html\r\n\r\n<ht
 <head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><body></html>";
 
 
-void list_dir(char *dir_name, char* file_str);
+void list_dir(char *dir_name, char* file_str, int new_socket);
 void cgiHandler(char *filename, int new_socket);
 void htmlhandler(char * filename, int new_socket) {
     FILE * toopen;
@@ -65,6 +65,9 @@ int parse(char * buffer, char *filename) {
     strtok(buffer,"\n");
     char * current = strtok(buffer, " ");
     printf("%s %s\n","First token:",current);
+    if (strcmp("GET",current)!=0) {
+    return 7;
+    }
     char * current2 = strtok(NULL," ");
     printf("%s %s\n","Second token:",current2);
     char * ptr;
@@ -84,23 +87,23 @@ int parse(char * buffer, char *filename) {
         }
     } else {
         printf("Running while loop\n");
-		current2++;
-		printf("current2 is %s\n",current2);
-		char* firstHalf = strtok(current2,"?");
-		char* secondHalf = strtok(NULL,"?");
-		printf("firstHalf: %s",firstHalf);
-		
-		if (secondHalf!=NULL) {
-			int ret;
-			ret = setenv("QUERY_STRING",secondHalf,1);
-		}
+        current2++;
+        printf("current2 is %s\n",current2);
+        char* firstHalf = strtok(current2,"?");
+        char* secondHalf = strtok(NULL,"?");
+        printf("firstHalf: %s",firstHalf);
+        
+        if (secondHalf!=NULL) {
+            int ret;
+            ret = setenv("QUERY_STRING",secondHalf,1);
+        }
         
         strcpy(filename,firstHalf);
         while (*firstHalf!='.') {
             *firstHalf++;
         }
         *firstHalf++;
-	
+    
         char *ext;
         ext = firstHalf;
         printf("%s %s","Filename:",filename);
@@ -126,7 +129,7 @@ void directory_request(char* filename, int new_socket) {
 
     char files[10000];
     char *file_string = files;
-    list_dir(filename, file_string);
+    list_dir(filename, file_string, new_socket);
 
     char * header = "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\n";
     
@@ -136,7 +139,7 @@ void directory_request(char* filename, int new_socket) {
 }
 
 
-void list_dir(char *dir_name, char* file_str) {
+void list_dir(char *dir_name, char* file_str, int new_socket) {
 
 
     printf("running list dir\n");
@@ -146,6 +149,8 @@ void list_dir(char *dir_name, char* file_str) {
 
     if (d == NULL) {
         printf("couldnt open current directory %s\n", dir_name);
+    send(new_socket, fourofour, strlen(fourofour), 0);
+        exit(1);
         return;
     }
 
@@ -217,8 +222,10 @@ int main(int argc, char const *argv[])
             perror("accept"); 
             exit(EXIT_FAILURE); 
         }
-        pid = fork();
+    pid = fork();
+
         if (pid==0) {
+        char * fiveofive = "HTTP/1.1 501 Not Implemented \r\nContent-type: text/html\r\n\r\n<html><head><title>501 Error</title></head><body><h1>501 Not Implemented</h1><body></html>";
             valread = read( new_socket , buffer, 1024); 
             char filename[100];
             char *fp = filename;
@@ -229,6 +236,8 @@ int main(int argc, char const *argv[])
             switch(req_type) {
                 case -1:
                     // bad case no args
+            send(new_socket, fourofour, strlen(fourofour), 0);
+
                     break;
 
                 case 1:
@@ -253,8 +262,14 @@ int main(int argc, char const *argv[])
                     break;
                 case 6:
                     cgiHandler(fp, new_socket);
-            break;
+                    break;
+                case 7:
+                    
+                    send(new_socket, fiveofive, strlen(fiveofive), 0);
+                    break;
                 default:
+            send(new_socket, fourofour, strlen(fourofour), 0);
+
                     //unrecognized file type 
                     printf("unrecognized file type\n");
                     break;
